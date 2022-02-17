@@ -123,6 +123,7 @@ class MassScannerProducerThread(threading.Thread):
                     processes[name] = 1
                 print("DATA:{}\n".format(processes))
                 sleep(0.1)
+                print("END DATA")
                 
                 parent_server_scan = all_ongoing_server_scans[completed_job.parent_server_scan_request_uuid]
                 parent_server_scan.completed_scan_jobs.append(completed_job)
