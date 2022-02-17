@@ -106,7 +106,7 @@ class MassScannerProducerThread(threading.Thread):
             )
             all_ongoing_server_scans[server_scan_request.uuid] = next_queued_server_scan
             self._server_scan_requests_queue_in.task_done()
-
+        processes = {}
         # Main loop for checking if a server scan was completed and queuing the next scan
         while all_ongoing_server_scans:
             # Wait for some jobs to complete
@@ -115,6 +115,14 @@ class MassScannerProducerThread(threading.Thread):
             # Retrieve and store completed jobs
             while not self._completed_jobs_queue.empty():
                 completed_job = self._completed_jobs_queue.get(block=False)
+                
+                name = completed_job.for_scan_command.name
+                if name in processes: 
+                    processes[name] += 1
+                else:
+                    processes[name] = 1
+                print("DATA:{}\n".format(processes))
+                
                 parent_server_scan = all_ongoing_server_scans[completed_job.parent_server_scan_request_uuid]
                 parent_server_scan.completed_scan_jobs.append(completed_job)
                 self._completed_jobs_queue.task_done()
