@@ -47,8 +47,7 @@ class TrustStoresUpdateCompleted(CommandLineParsingError):
 
 @dataclass(frozen=True)
 class ParsedCommandLine:
-    """The result of parsing a command line used to launch sslyze.
-    """
+    """The result of parsing a command line used to launch sslyze."""
 
     invalid_servers: List[InvalidServerStringError]
 
@@ -85,8 +84,7 @@ _STARTTLS_PROTOCOL_DICT = {
 
 class CommandLineParser:
     def __init__(self, sslyze_version: str) -> None:
-        """Generate SSLyze's command line parser.
-        """
+        """Generate SSLyze's command line parser."""
         self.aparser = ArgumentParser(prog="sslyze", description=f"SSLyze version {sslyze_version}")
 
         # Add generic command line options to the parser
@@ -96,23 +94,25 @@ class CommandLineParser:
         scan_commands_group = self.aparser.add_argument_group("Scan commands")
         for scan_option in self._get_plugin_scan_commands():
             scan_commands_group.add_argument(
-                f"--{scan_option.option}", help=scan_option.help, action=scan_option.action,
+                f"--{scan_option.option}",
+                help=scan_option.help,
+                action=scan_option.action,
             )
 
         self.aparser.add_argument(
             "--mozilla_config",
             action="store",
             dest="mozilla_config",
-            choices=[config.value for config in MozillaTlsConfigurationEnum],
+            choices=[config.value for config in MozillaTlsConfigurationEnum] + ["disable"],
             help="Shortcut to queue various scan commands needed to check the server's TLS configurations against one"
-            ' of Mozilla\'s recommended TLS configuration. Set to "intermediate" by default.',
+            ' of Mozilla\'s recommended TLS configuration. Set to "intermediate" by default. Use "disable" to disable'
+            " this check.",
         )
 
         self.aparser.add_argument(dest="target", default=[], nargs="*", help="The list of servers to scan.")
 
     def parse_command_line(self) -> ParsedCommandLine:
-        """Parses the command line used to launch SSLyze.
-        """
+        """Parses the command line used to launch SSLyze."""
         args_command_list = self.aparser.parse_args()
         args_target_list = []
 
@@ -151,7 +151,11 @@ class CommandLineParser:
         # Enable the commands needed by --mozilla-config
         check_against_mozilla_config: Optional[MozillaTlsConfigurationEnum] = None
         if args_command_list.mozilla_config:
-            check_against_mozilla_config = MozillaTlsConfigurationEnum(args_command_list.mozilla_config)
+            if args_command_list.mozilla_config == "disable":
+                check_against_mozilla_config = None
+            else:
+                check_against_mozilla_config = MozillaTlsConfigurationEnum(args_command_list.mozilla_config)
+
             for scan_cmd in SCAN_COMMANDS_NEEDED_BY_MOZILLA_CHECKER:
                 cli_connector_cls = ScanCommandsRepository.get_implementation_cls(scan_cmd).cli_connector_cls
                 setattr(args_command_list, cli_connector_cls._cli_option, True)
@@ -204,7 +208,11 @@ class CommandLineParser:
         for server_string in args_target_list:
             try:
                 # Parse the string supplied via the CLI for this server
-                (hostname, ip_address, port,) = CommandLineServerStringParser.parse_server_string(server_string)
+                (
+                    hostname,
+                    ip_address,
+                    port,
+                ) = CommandLineServerStringParser.parse_server_string(server_string)
             except InvalidServerStringError as e:
                 # The server string is malformed
                 invalid_server_strings.append(e)
@@ -219,16 +227,25 @@ class CommandLineParser:
                 # Connect to the server via an HTTP proxy
                 # A limitation when using the CLI is that only one http_proxy_settings can be specified for all servers
                 server_location = ServerNetworkLocation(
-                    hostname=hostname, port=final_port, http_proxy_settings=http_proxy_settings,
+                    hostname=hostname,
+                    port=final_port,
+                    http_proxy_settings=http_proxy_settings,
                 )
             else:
                 # Connect to the server directly
                 if ip_address:
-                    server_location = ServerNetworkLocation(hostname=hostname, port=final_port, ip_address=ip_address,)
+                    server_location = ServerNetworkLocation(
+                        hostname=hostname,
+                        port=final_port,
+                        ip_address=ip_address,
+                    )
                 else:
                     # No IP address supplied - do a DNS lookup
                     try:
-                        server_location = ServerNetworkLocation(hostname=hostname, port=final_port,)
+                        server_location = ServerNetworkLocation(
+                            hostname=hostname,
+                            port=final_port,
+                        )
                     except ServerHostnameCouldNotBeResolved:
                         invalid_server_strings.append(
                             InvalidServerStringError(
@@ -279,9 +296,10 @@ class CommandLineParser:
         scan_commands_extra_arguments_dict: Dict[ScanCommand, plugin_base.ScanCommandExtraArgument] = {}
         for scan_command in ScanCommandsRepository.get_all_scan_commands():
             cli_connector_cls = ScanCommandsRepository.get_implementation_cls(scan_command).cli_connector_cls
-            (is_scan_cmd_enabled, extra_args,) = cli_connector_cls.find_cli_options_in_command_line(
-                args_command_list.__dict__
-            )
+            (
+                is_scan_cmd_enabled,
+                extra_args,
+            ) = cli_connector_cls.find_cli_options_in_command_line(args_command_list.__dict__)
             if is_scan_cmd_enabled:
                 scan_commands.add(scan_command)
                 if extra_args:
@@ -302,8 +320,7 @@ class CommandLineParser:
         )
 
     def _add_default_options(self) -> None:
-        """Add default command line options to the parser.
-        """
+        """Add default command line options to the parser."""
         # Updating the trust stores
         trust_stores_group = self.aparser.add_argument_group("Trust stores options")
         trust_stores_group.add_argument(
@@ -338,7 +355,11 @@ class CommandLineParser:
             default="PEM",
         )
         client_certificate_group.add_argument(
-            "--pass", metavar="PASSPHRASE", help="Client private key passphrase.", dest="keypass", default="",
+            "--pass",
+            metavar="PASSPHRASE",
+            help="Client private key passphrase.",
+            dest="keypass",
+            default="",
         )
 
         # Input / output
@@ -426,8 +447,7 @@ class CommandLineParser:
 
     @staticmethod
     def _get_plugin_scan_commands() -> List[OptParseCliOption]:
-        """Retrieve the list of command line options implemented by the plugins currently available.
-        """
+        """Retrieve the list of command line options implemented by the plugins currently available."""
         scan_commands_options = []
         for scan_command in ScanCommandsRepository.get_all_scan_commands():
             cli_connector_cls = ScanCommandsRepository.get_implementation_cls(scan_command).cli_connector_cls

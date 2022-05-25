@@ -64,8 +64,7 @@ class _OpenSslCcsInjectionCliConnector(ScanCommandCliConnector[OpenSslCcsInjecti
 
 
 class OpenSslCcsInjectionImplementation(ScanCommandImplementation[OpenSslCcsInjectionScanResult, None]):
-    """Test a server for the OpenSSL CCS Injection vulnerability (CVE-2014-0224).
-    """
+    """Test a server for the OpenSSL CCS Injection vulnerability (CVE-2014-0224)."""
 
     cli_connector_cls = _OpenSslCcsInjectionCliConnector
 
@@ -120,18 +119,15 @@ def _test_for_ccs_injection(server_info: ServerConnectivityInfo) -> bool:
 
 
 class _VulnerableToCcsInjection(Exception):
-    """Exception to raise during the handshake to hijack the flow and test for CCS.
-    """
+    """Exception to raise during the handshake to hijack the flow and test for CCS."""
 
 
 class _NotVulnerableToCcsInjection(Exception):
-    """Exception to raise during the handshake to hijack the flow and test for CCS.
-    """
+    """Exception to raise during the handshake to hijack the flow and test for CCS."""
 
 
 def _do_handshake_with_ccs_injection(self):  # type: ignore
-    """Modified do_handshake() to send a CCS injection payload and return the result.
-    """
+    """Modified do_handshake() to send a CCS injection payload and return the result."""
     try:
         # Start the handshake using nassl - will throw WantReadError right away
         self._ssl.do_handshake()
@@ -164,9 +160,14 @@ def _do_handshake_with_ccs_injection(self):  # type: ignore
                 raise
         except NotEnoughData:
             # Try to get more data
-            raw_ssl_bytes = self._sock.recv(16381)
+            try:
+                raw_ssl_bytes = self._sock.recv(16381)
+            except ConnectionError:
+                # No more data?
+                break
+
             if not raw_ssl_bytes:
-                # No data?
+                # No more data?
                 break
 
             remaining_bytes = remaining_bytes + raw_ssl_bytes
